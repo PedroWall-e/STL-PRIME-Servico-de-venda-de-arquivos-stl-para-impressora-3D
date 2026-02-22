@@ -1,0 +1,43 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: stl_prime_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: stl_prime
+      MYSQL_USER: stl_user
+      MYSQL_PASSWORD: stl_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "stl_user", "-p=stl_password" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: stl_prime_backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: mysql+pymysql://stl_user:stl_password@db:3306/stl_prime
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    container_name: stl_prime_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
