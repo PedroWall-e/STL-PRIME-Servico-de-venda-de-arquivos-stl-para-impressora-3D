@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Lock, Mail, User, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Lock, Mail, User, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 
 export default function SignupPage() {
@@ -24,153 +24,148 @@ export default function SignupPage() {
         setSuccessMessage(null);
 
         try {
-            // 1. Cadastrar o usuário na Auth do Supabase
             const { data, error: signUpError } = await supabase.auth.signUp({
                 email,
                 password,
-                options: {
-                    data: {
-                        full_name: fullName,
-                    },
-                    // Dependendo da config do Supabase, você pode precisar de confirmação de e-mail.
-                    // Para desenvolvimento rápido, geralmente desativamos o 'Confirm Email' no painel.
-                }
+                options: { data: { full_name: fullName } },
             });
 
             if (signUpError) {
+                if (signUpError.message === 'Not configured') {
+                    // Simulation mode
+                    await new Promise(r => setTimeout(r, 1200));
+                    setSuccessMessage('Conta criada! (Modo Simulação) — Redirecionando...');
+                    setTimeout(() => router.push('/dashboard'), 1500);
+                    return;
+                }
                 throw signUpError;
             }
 
-            if (data.user) {
-                // 2. Tentar inserir na tabela pública 'users' se você não tiver uma trigger automática.
-                // Como definimos database.sql com referencia, é ideal ter uma trigger lá no PostgreSQL 
-                // para espelhar auth.users na public.users, OU fazemos a inserção manual aqui:
-                const { error: profileError } = await supabase
-                    .from('users')
-                    .insert([
-                        { id: data.user.id, full_name: fullName, username: email.split('@')[0] + Math.floor(Math.random() * 1000) }
-                    ]);
-
-                if (profileError) {
-                    console.error("Erro ao criar perfil público:", profileError);
-                    // Não quebraremos o fluxo principal se apenas o perfil falhar agora
-                }
-
-                setSuccessMessage("Conta criada com sucesso! Redirecionando...");
-                setTimeout(() => {
-                    router.push('/');
-                    router.refresh();
-                }, 2000);
+            if (data.user && !data.session) {
+                setSuccessMessage('Conta criada com sucesso! Verifique o seu e-mail para confirmar o cadastro.');
+            } else {
+                router.push('/');
+                router.refresh();
             }
         } catch (err: any) {
-            setError(err.message || 'Ocorreu um erro ao criar a conta.');
+            setError(err.message || 'Erro ao criar conta. Tente novamente.');
         } finally {
             setLoading(false);
         }
     };
+
     return (
-        <div className="min-h-screen flex items-center justify-center px-6 py-12 bg-slate-950 relative overflow-hidden">
-            <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-prime-600/10 blur-[120px] -z-10" />
-            <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-blue-600/10 blur-[120px] -z-10" />
-
-            <div className="w-full max-w-md">
-                <div className="text-center mb-10 text-balance">
-                    <Link href="/" className="text-3xl font-bold font-outfit text-gradient mb-2 inline-block">
-                        STL Prime
-                    </Link>
-                    <h2 className="text-2xl font-bold font-outfit text-white">Sua jornada começa aqui</h2>
-                    <p className="text-slate-400 mt-2">Crie sua conta e acesse arquivos gratuitos agora mesmo</p>
+        <div className="min-h-screen flex bg-[#F9F8F6]">
+            {/* Left panel */}
+            <div className="hidden lg:flex flex-1 relative overflow-hidden bg-[#2B2B2B]">
+                <div className="absolute inset-0">
+                    <div className="absolute top-0 right-0 w-[60%] h-[60%] bg-[#3347FF]/20 rounded-full blur-[100px]"></div>
+                    <div className="absolute bottom-0 left-0 w-[50%] h-[50%] bg-[#B2624F]/20 rounded-full blur-[100px]"></div>
                 </div>
+                <div className="relative z-10 flex flex-col justify-between p-14 w-full">
+                    <Link href="/" className="flex items-center gap-3">
+                        <img src="/logo.svg" alt="STL Prime" className="w-10 h-10" />
+                        <span className="font-black text-2xl text-white tracking-tight">stl<span className="text-[#8C9BFF]">prime</span></span>
+                    </Link>
+                    <div>
+                        <p className="text-gray-400 text-sm font-bold uppercase tracking-widest mb-4">Junte-se à comunidade</p>
+                        <h2 className="text-white text-4xl font-black leading-tight mb-6">
+                            Comece a criar.<br />Comece a crescer.
+                        </h2>
+                        <div className="space-y-4">
+                            {['Acesso gratuito a milhares de modelos', 'Publique e venda os seus designs', 'Comunidade de 50k+ makers'].map((item, i) => (
+                                <div key={i} className="flex items-center gap-3 text-gray-300 font-medium">
+                                    <div className="w-5 h-5 rounded-full bg-[#3347FF]/20 flex items-center justify-center">
+                                        <CheckCircle2 size={12} className="text-[#8C9BFF]" />
+                                    </div>
+                                    {item}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    <p className="text-gray-600 text-sm">© 2024 Data Frontier Labs</p>
+                </div>
+            </div>
 
-                <div className="glass-card p-8 rounded-2xl border border-white/5 shadow-2xl">
-                    <form className="space-y-5" onSubmit={handleSignup}>
-                        {error && (
-                            <div className="bg-red-500/10 border border-red-500/50 text-red-500 text-sm p-3 rounded-xl flex items-start gap-2">
-                                <AlertCircle size={18} className="shrink-0 mt-0.5" />
-                                <span>{error}</span>
-                            </div>
-                        )}
-                        {successMessage && (
-                            <div className="bg-green-500/10 border border-green-500/50 text-green-500 text-sm p-3 rounded-xl">
-                                {successMessage}
-                            </div>
-                        )}
+            {/* Right panel - form */}
+            <div className="flex-1 flex items-center justify-center px-6 py-12">
+                <div className="w-full max-w-md">
+                    <Link href="/" className="flex items-center gap-3 mb-10 lg:hidden">
+                        <img src="/logo.svg" alt="STL Prime" className="w-10 h-10" />
+                        <span className="font-black text-2xl text-[#2B2B2B] tracking-tight">stl<span className="text-[#3347FF]">prime</span></span>
+                    </Link>
+
+                    <h1 className="text-3xl font-black text-[#2B2B2B] mb-2">Criar conta gratuita</h1>
+                    <p className="text-gray-500 font-medium mb-10">É rápido e gratuito. Comece agora.</p>
+
+                    {error && (
+                        <div className="flex items-center gap-3 p-4 mb-6 bg-red-50 border border-red-200 rounded-2xl text-sm text-red-700 font-medium">
+                            <AlertCircle className="w-5 h-5 shrink-0" /> {error}
+                        </div>
+                    )}
+
+                    {successMessage && (
+                        <div className="flex items-center gap-3 p-4 mb-6 bg-green-50 border border-green-200 rounded-2xl text-sm text-green-700 font-medium">
+                            <CheckCircle2 className="w-5 h-5 shrink-0" /> {successMessage}
+                        </div>
+                    )}
+
+                    <form onSubmit={handleSignup} className="space-y-5">
                         <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">Nome Completo</label>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Nome completo</label>
                             <div className="relative">
-                                <input
-                                    type="text"
-                                    required
-                                    value={fullName}
-                                    onChange={(e) => setFullName(e.target.value)}
-                                    className="w-full bg-slate-900 border border-white/10 rounded-xl py-3 px-11 text-white focus:border-prime-500 focus:ring-1 focus:ring-prime-500 transition-all outline-none"
-                                    placeholder="Pedro Wall-e"
-                                />
-                                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                                    <User className="w-4 h-4 text-gray-400" />
+                                </div>
+                                <input type="text" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Seu Nome" required
+                                    className="w-full pl-10 pr-4 py-3.5 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 text-sm font-bold focus:bg-white focus:border-[#3347FF] focus:ring-2 focus:ring-[#3347FF]/20 outline-none transition-all placeholder:text-gray-400" />
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">E-mail</label>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">E-mail</label>
                             <div className="relative">
-                                <input
-                                    type="email"
-                                    required
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full bg-slate-900 border border-white/10 rounded-xl py-3 px-11 text-white focus:border-prime-500 focus:ring-1 focus:ring-prime-500 transition-all outline-none"
-                                    placeholder="seu@email.com"
-                                />
-                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                                    <Mail className="w-4 h-4 text-gray-400" />
+                                </div>
+                                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" required
+                                    className="w-full pl-10 pr-4 py-3.5 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 text-sm font-bold focus:bg-white focus:border-[#3347FF] focus:ring-2 focus:ring-[#3347FF]/20 outline-none transition-all placeholder:text-gray-400" />
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">Senha</label>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Senha</label>
                             <div className="relative">
-                                <input
-                                    type="password"
-                                    required
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full bg-slate-900 border border-white/10 rounded-xl py-3 px-11 text-white focus:border-prime-500 focus:ring-1 focus:ring-prime-500 transition-all outline-none"
-                                    placeholder="••••••••"
-                                    minLength={6}
-                                />
-                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                                    <Lock className="w-4 h-4 text-gray-400" />
+                                </div>
+                                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres" required minLength={8}
+                                    className="w-full pl-10 pr-4 py-3.5 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 text-sm font-bold focus:bg-white focus:border-[#3347FF] focus:ring-2 focus:ring-[#3347FF]/20 outline-none transition-all placeholder:text-gray-400" />
                             </div>
                         </div>
 
-                        <div className="flex items-start gap-3 py-2">
-                            <input type="checkbox" className="mt-1 rounded border-white/10 bg-slate-900 text-prime-500 focus:ring-prime-500" required />
-                            <p className="text-xs text-slate-400 leading-relaxed">
-                                Eu aceito os <span className="text-prime-400">Termos de Uso</span> e a <span className="text-prime-400">Política de Privacidade</span> da STL Prime.
-                            </p>
-                        </div>
-
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className={`w-full bg-prime-600 hover:bg-prime-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-prime-600/20 flex items-center justify-center gap-2 group ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
-                        >
-                            {loading ? 'Criando Conta...' : 'Criar Conta'}
-                            {!loading && <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />}
+                        <button type="submit" disabled={loading}
+                            className="w-full py-4 rounded-2xl bg-[#3347FF] text-white font-bold flex items-center justify-center gap-2 hover:bg-[#2236ee] transition-colors disabled:opacity-60 shadow-lg shadow-[#3347FF]/20 hover:-translate-y-0.5 transform duration-200">
+                            {loading ? (
+                                <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                            ) : (
+                                <><span>Criar Conta</span><ArrowRight className="w-4 h-4" /></>
+                            )}
                         </button>
+
+                        <p className="text-xs text-gray-400 text-center font-medium">
+                            Ao criar conta, concorda com os nossos{' '}
+                            <a href="#" className="text-[#3347FF] hover:underline">Termos de Serviço</a> e{' '}
+                            <a href="#" className="text-[#3347FF] hover:underline">Política de Privacidade</a>.
+                        </p>
                     </form>
 
-                    <div className="mt-8 pt-8 border-t border-white/5 text-center">
-                        <p className="text-slate-400">
-                            Já tem uma conta?{' '}
-                            <Link href="/auth/login" className="text-prime-400 font-bold hover:text-prime-300 transition-colors">
-                                Fazer login
-                            </Link>
-                        </p>
-                    </div>
-                </div>
-
-                <div className="mt-8 flex items-center justify-center gap-2 text-slate-500 text-xs">
-                    <ShieldCheck size={14} />
-                    Seus dados estão protegidos com criptografia de ponta.
+                    <p className="mt-8 text-center text-sm font-medium text-gray-500">
+                        Já tem conta?{' '}
+                        <Link href="/auth/login" className="text-[#3347FF] font-bold hover:underline">
+                            Entrar
+                        </Link>
+                    </p>
                 </div>
             </div>
         </div>

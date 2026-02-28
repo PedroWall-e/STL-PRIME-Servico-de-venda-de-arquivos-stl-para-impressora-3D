@@ -1,11 +1,50 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Box, Search, UploadCloud, User, Menu, X } from 'lucide-react';
+import { Box, Search, UploadCloud, User, Menu, X, ShoppingBag, FolderHeart, LayoutDashboard } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
 
 export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
+    const [user, setUser] = useState<any>(null);
+    const [profile, setProfile] = useState<any>(null);
+    const supabase = createClient();
+
+    useEffect(() => {
+        const getSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            setUser(session?.user ?? null);
+
+            if (session?.user) {
+                const { data: prof } = await supabase
+                    .from('users')
+                    .select('role, full_name, avatar_url')
+                    .eq('id', session.user.id)
+                    .single();
+                setProfile(prof);
+            }
+        };
+
+        getSession();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null);
+            if (session?.user) {
+                // Fetch profile on login
+                supabase.from('users').select('role, full_name, avatar_url').eq('id', session.user.id).single()
+                    .then(({ data }) => setProfile(data));
+            } else {
+                setProfile(null);
+            }
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+    };
 
     return (
         <>
@@ -40,18 +79,51 @@ export default function Navbar() {
                         <Link href="/catalog/paid" className="text-gray-600 hover:text-prime-blue font-bold text-sm transition-colors">
                             Explorar
                         </Link>
-                        <Link href="/catalog/paid" className="text-gray-600 hover:text-prime-blue font-bold text-sm transition-colors">
+                        <Link href="/community" className="text-gray-600 hover:text-prime-blue font-bold text-sm transition-colors">
                             Comunidade
                         </Link>
+                        <a
+                            href="https://www.datafrontier3d.com.br"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 text-orange-600 hover:text-orange-700 font-bold text-sm transition-colors"
+                        >
+                            <ShoppingBag className="w-4 h-4" />
+                            Loja DF
+                        </a>
+
                         <div className="h-6 w-px bg-gray-200 mx-2"></div>
-                        <button className="flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-prime-blue transition-colors">
-                            <UploadCloud className="w-4 h-4" />
-                            Carregar
-                        </button>
-                        <Link href="/auth/signup" className="flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-white transition-transform hover:scale-105 bg-prime-blue">
-                            <User className="w-4 h-4" />
-                            Entrar
-                        </Link>
+
+                        {user ? (
+                            <div className="flex items-center gap-4">
+                                {profile?.role === 'admin' && (
+                                    <Link href="/admin" className="flex items-center gap-1.5 text-red-600 hover:text-red-700 font-bold text-sm transition-colors">
+                                        <LayoutDashboard className="w-4 h-4" />
+                                        Admin
+                                    </Link>
+                                )}
+                                <Link href="/my-collections" className="text-gray-600 hover:text-prime-blue font-bold text-sm transition-colors flex items-center gap-1.5">
+                                    <FolderHeart className="w-4 h-4" />
+                                    Coleções
+                                </Link>
+                                <Link href="/upload" className="flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-prime-blue transition-colors">
+                                    <UploadCloud className="w-4 h-4" />
+                                    Carregar
+                                </Link>
+                                <Link href="/profile" className="w-10 h-10 rounded-full border border-gray-200 overflow-hidden bg-gray-100 flex items-center justify-center">
+                                    {profile?.avatar_url ? (
+                                        <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <User className="w-5 h-5 text-gray-400" />
+                                    )}
+                                </Link>
+                            </div>
+                        ) : (
+                            <Link href="/auth/signup" className="flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-white transition-transform hover:scale-105 bg-prime-blue">
+                                <User className="w-4 h-4" />
+                                Entrar
+                            </Link>
+                        )}
                     </div>
 
                     {/* Toggle Mobile */}
@@ -73,13 +145,25 @@ export default function Navbar() {
                         className="w-full bg-gray-100 border-transparent focus:border-prime-blue rounded-xl py-3 px-4 text-sm outline-none"
                     />
                     <Link href="/catalog/paid" className="text-left font-bold text-lg text-gray-800" onClick={() => setIsOpen(false)}>Explorar</Link>
-                    <Link href="/catalog/paid" className="text-left font-bold text-lg text-gray-800" onClick={() => setIsOpen(false)}>Comunidade</Link>
-                    <button className="text-left font-bold text-lg text-prime-blue flex items-center gap-2">
-                        <UploadCloud className="w-5 h-5" /> Carregar Modelo
-                    </button>
-                    <Link href="/auth/signup" className="mt-auto py-4 rounded-xl font-bold text-white text-center bg-prime-blue" onClick={() => setIsOpen(false)}>
-                        Entrar / Registar
-                    </Link>
+                    <Link href="/community" className="text-left font-bold text-lg text-gray-800" onClick={() => setIsOpen(false)}>Comunidade</Link>
+                    <a href="https://www.datafrontier3d.com.br" className="text-left font-bold text-lg text-orange-600" onClick={() => setIsOpen(false)}>Loja Data Frontier</a>
+
+                    {user ? (
+                        <>
+                            <Link href="/my-collections" className="text-left font-bold text-lg text-gray-800" onClick={() => setIsOpen(false)}>Minhas Coleções</Link>
+                            <Link href="/upload" className="text-left font-bold text-lg text-prime-blue flex items-center gap-2" onClick={() => setIsOpen(false)}>
+                                <UploadCloud className="w-5 h-5" /> Carregar Modelo
+                            </Link>
+                            {profile?.role === 'admin' && (
+                                <Link href="/admin" className="text-left font-bold text-lg text-red-600" onClick={() => setIsOpen(false)}>Painel Admin</Link>
+                            )}
+                            <button onClick={handleLogout} className="mt-auto py-4 rounded-xl font-bold text-white text-center bg-gray-800">Sair</button>
+                        </>
+                    ) : (
+                        <Link href="/auth/signup" className="mt-auto py-4 rounded-xl font-bold text-white text-center bg-prime-blue" onClick={() => setIsOpen(false)}>
+                            Entrar / Registar
+                        </Link>
+                    )}
                 </div>
             )}
         </>

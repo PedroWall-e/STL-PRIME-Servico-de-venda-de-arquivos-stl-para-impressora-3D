@@ -2,8 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-    /* Removed fixed background-color to let Tailwind/Inline styles take over */
+@layer base {
+    :root {
+        --color-dark: #2B2B2B;
+        --color-blue: #3347FF;
+        --color-peach: #FFE3D6;
+        --color-rawhide: #B2624F;
+        --color-bg: #F9F8F6;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        background-color: var(--color-bg);
+        color: var(--color-dark);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
 }
 
 @layer utilities {
@@ -11,14 +32,12 @@ body {
         text-wrap: balance;
     }
 
-    /* O glass-card antigo era escuro. Aqui está uma versão clara adaptada */
     .glass-card {
         background: rgba(255, 255, 255, 0.75);
         backdrop-filter: blur(20px);
-        border: 1px solid rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(0, 0, 0, 0.06);
     }
 
-    /* Utilitário para ocultar scrollbar usado na nova página */
     .scrollbar-hide::-webkit-scrollbar {
         display: none;
     }
@@ -26,5 +45,15 @@ body {
     .scrollbar-hide {
         -ms-overflow-style: none;
         scrollbar-width: none;
+    }
+
+    /* Fade-in animation for page transitions */
+    .animate-fadein {
+        animation: fadein 0.4s ease forwards;
+    }
+
+    @keyframes fadein {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
     }
 }

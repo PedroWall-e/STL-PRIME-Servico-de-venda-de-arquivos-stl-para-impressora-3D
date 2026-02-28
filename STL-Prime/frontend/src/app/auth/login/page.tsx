@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Lock, Mail, ArrowRight, AlertCircle } from 'lucide-react';
+import { Lock, Mail, ArrowRight, AlertCircle, Box } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 
 export default function LoginPage() {
@@ -15,110 +15,136 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const isSimulationMode = () => {
+        const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+        return !url || url.includes('SEU_PROJETO') || url.includes('mockup') || url === 'https://mockup.supabase.co';
+    };
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
 
+        // Simulation mode: se as credenciais do Supabase são placeholder, finge o login
+        if (isSimulationMode()) {
+            await new Promise(r => setTimeout(r, 1200));
+            router.push('/dashboard');
+            return;
+        }
+
         try {
-            const { error: signInError } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            });
-
-            if (signInError) {
-                throw signInError;
-            }
-
-            // Sucesso! O cookie da sessão é setado automaticamente pelo client do Supabase.
-            // Redireciona para a home e força o refresh para a navbar reagir.
+            const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+            if (signInError) throw signInError;
             router.push('/');
             router.refresh();
-
         } catch (err: any) {
             setError(err.message || 'E-mail ou senha incorretos.');
-        } finally {
             setLoading(false);
         }
     };
+
     return (
-        <div className="min-h-screen flex items-center justify-center px-6 py-12 bg-slate-950 relative overflow-hidden">
-            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-prime-600/10 blur-[120px] -z-10" />
-            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600/10 blur-[120px] -z-10" />
-
-            <div className="w-full max-w-md">
-                <div className="text-center mb-10">
-                    <Link href="/" className="text-3xl font-bold font-outfit text-gradient mb-2 inline-block">
-                        STL Prime
-                    </Link>
-                    <h2 className="text-2xl font-bold font-outfit text-white">Bem-vindo de volta</h2>
-                    <p className="text-slate-400 mt-2">Entre na sua conta Data Frontier</p>
+        <div className="min-h-screen flex bg-[#F9F8F6]">
+            {/* Left side - visual */}
+            <div className="hidden lg:flex flex-1 relative overflow-hidden bg-[#3347FF]">
+                <div className="absolute inset-0">
+                    <div className="absolute top-[-20%] left-[-20%] w-[70%] h-[70%] bg-white/10 rounded-full blur-[80px]"></div>
+                    <div className="absolute bottom-[-20%] right-[-20%] w-[70%] h-[70%] bg-[#B2624F]/30 rounded-full blur-[80px]"></div>
                 </div>
+                <div className="relative z-10 flex flex-col justify-between p-14 w-full">
+                    <Link href="/" className="flex items-center gap-3">
+                        <img src="/logo.svg" alt="STL Prime" className="w-10 h-10" />
+                        <span className="font-black text-2xl text-white tracking-tight">stl<span className="text-blue-200">prime</span></span>
+                    </Link>
+                    <div>
+                        <p className="text-blue-200 text-sm font-bold uppercase tracking-widest mb-4">Para criadores e makers</p>
+                        <h2 className="text-white text-4xl font-black leading-tight mb-6">
+                            Publique o seu design.<br />Ganhe com ele.
+                        </h2>
+                        <p className="text-blue-100/80 text-lg font-medium">
+                            Aceda ao maior marketplace de ficheiros STL e 3MF de Portugal.
+                        </p>
+                    </div>
+                    <p className="text-blue-200/60 text-sm">© 2024 Data Frontier Labs</p>
+                </div>
+            </div>
 
-                <div className="glass-card p-8 rounded-2xl border border-white/5 shadow-2xl">
-                    <form className="space-y-6" onSubmit={handleLogin}>
-                        {error && (
-                            <div className="bg-red-500/10 border border-red-500/50 text-red-500 text-sm p-3 rounded-xl flex items-start gap-2">
-                                <AlertCircle size={18} className="shrink-0 mt-0.5" />
-                                <span>{error}</span>
-                            </div>
-                        )}
+            {/* Right side - form */}
+            <div className="flex-1 flex items-center justify-center px-6 py-12">
+                <div className="w-full max-w-md">
+                    {/* Mobile logo */}
+                    <Link href="/" className="flex items-center gap-3 mb-10 lg:hidden">
+                        <img src="/logo.svg" alt="STL Prime" className="w-10 h-10" />
+                        <span className="font-black text-2xl text-[#2B2B2B] tracking-tight">stl<span className="text-[#3347FF]">prime</span></span>
+                    </Link>
+
+                    <h1 className="text-3xl font-black text-[#2B2B2B] mb-2">Bem-vindo de volta</h1>
+                    <p className="text-gray-500 font-medium mb-10">Entre na sua conta para continuar.</p>
+
+                    {error && (
+                        <div className="flex items-center gap-3 p-4 mb-6 bg-red-50 border border-red-200 rounded-2xl text-sm text-red-700 font-medium">
+                            <AlertCircle className="w-5 h-5 shrink-0" />
+                            {error}
+                        </div>
+                    )}
+
+                    <form onSubmit={handleLogin} className="space-y-5">
                         <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">E-mail</label>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">E-mail</label>
                             <div className="relative">
+                                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                                    <Mail className="w-4 h-4 text-gray-400" />
+                                </div>
                                 <input
                                     type="email"
-                                    required
                                     value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full bg-slate-900 border border-white/10 rounded-xl py-3 px-11 text-white focus:border-prime-500 focus:ring-1 focus:ring-prime-500 transition-all outline-none"
+                                    onChange={e => setEmail(e.target.value)}
                                     placeholder="seu@email.com"
+                                    required
+                                    className="w-full pl-10 pr-4 py-3.5 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 text-sm font-bold focus:bg-white focus:border-[#3347FF] focus:ring-2 focus:ring-[#3347FF]/20 outline-none transition-all placeholder:text-gray-400"
                                 />
-                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">Senha</label>
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="block text-sm font-bold text-gray-700">Senha</label>
+                                <a href="#" className="text-xs font-bold text-[#3347FF] hover:underline">Esqueceu a senha?</a>
+                            </div>
                             <div className="relative">
+                                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                                    <Lock className="w-4 h-4 text-gray-400" />
+                                </div>
                                 <input
                                     type="password"
-                                    required
                                     value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full bg-slate-900 border border-white/10 rounded-xl py-3 px-11 text-white focus:border-prime-500 focus:ring-1 focus:ring-prime-500 transition-all outline-none"
+                                    onChange={e => setPassword(e.target.value)}
                                     placeholder="••••••••"
+                                    required
+                                    className="w-full pl-10 pr-4 py-3.5 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 text-sm font-bold focus:bg-white focus:border-[#3347FF] focus:ring-2 focus:ring-[#3347FF]/20 outline-none transition-all placeholder:text-gray-400"
                                 />
-                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                             </div>
-                        </div>
-
-                        <div className="flex items-center justify-between text-sm">
-                            <label className="flex items-center gap-2 text-slate-400 cursor-pointer">
-                                <input type="checkbox" className="rounded border-white/10 bg-slate-900 text-prime-500 focus:ring-prime-500" />
-                                Lembrar de mim
-                            </label>
-                            <a href="#" className="text-prime-400 hover:text-prime-300 transition-colors">Esqueceu a senha?</a>
                         </div>
 
                         <button
                             type="submit"
                             disabled={loading}
-                            className={`w-full bg-prime-600 hover:bg-prime-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-prime-600/20 flex items-center justify-center gap-2 group ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            className="w-full py-4 rounded-2xl bg-[#3347FF] text-white font-bold flex items-center justify-center gap-2 hover:bg-[#2236ee] transition-colors disabled:opacity-60 shadow-lg shadow-[#3347FF]/20 hover:shadow-[#3347FF]/30 hover:-translate-y-0.5 transform duration-200"
                         >
-                            {loading ? 'Entrando...' : 'Entrar'}
-                            {!loading && <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />}
+                            {loading ? (
+                                <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                            ) : (
+                                <><span>Entrar</span><ArrowRight className="w-4 h-4" /></>
+                            )}
                         </button>
                     </form>
 
-                    <div className="mt-8 pt-8 border-t border-white/5 text-center">
-                        <p className="text-slate-400">
-                            Não tem uma conta?{' '}
-                            <Link href="/auth/signup" className="text-prime-400 font-bold hover:text-prime-300 transition-colors">
-                                Criar conta gratuita
-                            </Link>
-                        </p>
-                    </div>
+                    <p className="mt-8 text-center text-sm font-medium text-gray-500">
+                        Ainda não tem conta?{' '}
+                        <Link href="/auth/signup" className="text-[#3347FF] font-bold hover:underline">
+                            Criar conta gratuita
+                        </Link>
+                    </p>
                 </div>
             </div>
         </div>

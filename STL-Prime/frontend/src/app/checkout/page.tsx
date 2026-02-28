@@ -5,6 +5,7 @@ import { useCart } from '@/context/CartContext';
 import { ShoppingCart, Package, ArrowLeft, CreditCard, Shield, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { createClient } from '@/utils/supabase/client';
 
 export default function CheckoutPage() {
     const { items, totalPrice, clearCart } = useCart();
@@ -14,27 +15,48 @@ export default function CheckoutPage() {
 
     const handleCheckout = async () => {
         setStatus('processing');
-        // TODO: Conectar ao Stripe/MercadoPago na próxima fase
-        // Por agora, simula o processamento para itens gratuitos
-        await new Promise(r => setTimeout(r, 2000));
-        setStatus('success');
-        clearCart();
+
+        try {
+            const supabase = createClient();
+            const { data: { session: authSession } } = await supabase.auth.getSession();
+            const userId = authSession?.user?.id;
+
+            const response = await fetch('/api/checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items, userId }),
+            });
+
+            const data = await response.json();
+
+            if (data.url) {
+                window.location.href = data.url;
+            } else {
+                alert('Erro ao iniciar checkout: ' + (data.error || 'Erro desconhecido'));
+                setStatus('idle');
+            }
+        } catch (error) {
+            console.error('Checkout error:', error);
+            alert('Erro de conexão com o servidor de pagamentos.');
+            setStatus('idle');
+        }
     };
+
 
     if (status === 'success') {
         return (
             <div className="min-h-screen bg-[#F9F8F6] flex items-center justify-center p-4">
                 <div className="text-center max-w-md">
-                    <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
+                    <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6 shadow-[0_0_40px_rgba(74,222,128,0.3)]">
                         <CheckCircle2 className="w-12 h-12 text-green-500" />
                     </div>
-                    <h1 className="text-3xl font-black text-[#2B2B2B] mb-2">Pedido Confirmado!</h1>
-                    <p className="text-gray-500 mb-8">Seus arquivos estão disponíveis para download na sua conta.</p>
+                    <h1 className="text-3xl font-black text-[#2B2B2B] mb-2">Pagamento Confirmado!</h1>
+                    <p className="text-gray-500 mb-8">Seus arquivos estão processados e disponíveis na sua conta (Modo Simulação).</p>
                     <Link
-                        href="/"
-                        className="inline-flex items-center gap-2 bg-[#3347FF] text-white px-8 py-4 rounded-2xl font-bold hover:bg-[#2236ee] transition-colors"
+                        href="/dashboard"
+                        className="inline-flex items-center gap-2 bg-[#3347FF] text-white px-8 py-4 rounded-2xl font-bold hover:bg-[#2236ee] transition-colors shadow-lg hover:shadow-xl hover:-translate-y-1 transform duration-200"
                     >
-                        Voltar ao Catálogo
+                        Ver Meus Downloads
                     </Link>
                 </div>
             </div>
@@ -153,12 +175,21 @@ export default function CheckoutPage() {
                                     </button>
                                 ) : (
                                     <button
-                                        disabled
-                                        className="w-full py-4 rounded-2xl bg-[#3347FF] text-white font-bold text-base opacity-60 flex items-center justify-center gap-2 cursor-not-allowed"
+                                        onClick={handleCheckout}
+                                        disabled={status === 'processing'}
+                                        className="w-full py-4 rounded-2xl bg-[#3347FF] text-white font-bold text-base hover:bg-[#2236ee] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                     >
-                                        <CreditCard className="w-5 h-5" />
-                                        Pagar com Stripe
-                                        <span className="ml-1 text-xs bg-white/20 px-2 py-0.5 rounded-full">Em breve</span>
+                                        {status === 'processing' ? (
+                                            <>
+                                                <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                                                Processando...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <CreditCard className="w-5 h-5" />
+                                                Pagar com Stripe
+                                            </>
+                                        )}
                                     </button>
                                 )}
 
