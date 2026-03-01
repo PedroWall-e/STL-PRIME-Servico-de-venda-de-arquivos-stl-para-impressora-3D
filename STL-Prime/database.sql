@@ -30,8 +30,9 @@ CREATE TABLE public.users (
     address_zip TEXT,
     address_country TEXT DEFAULT 'Brasil',
 
-    -- Administrativo
+    -- Administrativo & Confiança
     role VARCHAR(20) DEFAULT 'user', -- 'user', 'admin'
+    trust_level INTEGER DEFAULT 1, -- 1 = Novato (passa por moderação), 2 = Confiável (aprovação automática)
 
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -74,6 +75,7 @@ CREATE TABLE public.models (
     thumbnail_url TEXT NOT NULL,
     gallery_urls TEXT[] DEFAULT '{}',
     file_url TEXT NOT NULL, -- Caminho no Storage Bucket
+    status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
     
     -- Relacionamentos
     author_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,

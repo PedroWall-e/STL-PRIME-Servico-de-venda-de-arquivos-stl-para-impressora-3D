@@ -47,12 +47,13 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(true);
     const [users, setUsers] = useState<any[]>([]);
     const [models, setModels] = useState<any[]>([]);
+    const [pendingModels, setPendingModels] = useState<any[]>([]);
     const [recentSales, setRecentSales] = useState<any[]>([]);
     const [stats, setStats] = useState({
         revenue: 0,
         subscribers: 0,
         downloads: 0,
-        conversion: 3.2
+        conversion: 0
     });
 
     const checkAdmin = async () => {
@@ -93,16 +94,26 @@ export default function AdminDashboard() {
             const { data: salesData } = await supabase.from('purchases').select('*, user:users(full_name), model:models(title)').order('created_at', { ascending: false }).limit(10);
             if (salesData) setRecentSales(salesData);
 
-            // Calculate Stats (Simplified for demo)
-            const totalRevenue = salesData?.reduce((acc, sale) => acc + Number(sale.amount_paid), 0) || 0;
-            const totalDownloads = modelsData?.reduce((acc, m) => acc + (m.downloads_count || 0), 0) || 0;
+            // Fetch Real Metrics
+            const metricsRes = await fetch('/api/admin/metrics');
+            if (metricsRes.ok) {
+                const metrics = await metricsRes.json();
+                const totalDownloads = modelsData?.reduce((acc, m) => acc + (m.downloads_count || 0), 0) || 0;
+                setStats({
+                    revenue: metrics.grossRevenue || 0,
+                    subscribers: usersData?.filter(u => u.subscription_status !== 'free').length || 0,
+                    downloads: totalDownloads,
+                    conversion: metrics.totalUsers > 0 ? Number(((metrics.totalSales / metrics.totalUsers) * 100).toFixed(1)) : 0
+                });
+            }
 
-            setStats({
-                revenue: totalRevenue,
-                subscribers: usersData?.filter(u => u.subscription_status !== 'free').length || 0,
-                downloads: totalDownloads,
-                conversion: 3.2
-            });
+            // Fetch Pending Models for Moderation
+            const modsRes = await fetch('/api/admin/models');
+            if (modsRes.ok) {
+                const pending = await modsRes.json();
+                setPendingModels(pending);
+            }
+
         } catch (error) {
             console.error('Error fetching admin data:', error);
         } finally {
@@ -129,6 +140,25 @@ export default function AdminDashboard() {
     const togglePublication = async (model: any) => {
         const { error } = await supabase.from('models').update({ is_published: !model.is_published }).eq('id', model.id);
         if (!error) fetchData();
+    };
+
+    const handleModerateModel = async (id: string, status: 'approved' | 'rejected') => {
+        if (!confirm(`Deseja realmente ${status === 'approved' ? 'APROVAR' : 'REJEITAR'} este modelo?`)) return;
+
+        try {
+            const res = await fetch('/api/admin/models', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, status })
+            });
+            if (res.ok) {
+                fetchData(); // Refresh list
+            } else {
+                alert('Erro ao moderar modelo.');
+            }
+        } catch (error) {
+            console.error(error);
+        }
     };
 
     if (loading) {
@@ -161,7 +191,8 @@ export default function AdminDashboard() {
                     {[
                         { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
                         { id: 'users', label: 'Usuários', icon: Users },
-                        { id: 'models', label: 'Modelos', icon: Package },
+                        { id: 'models', label: 'Catálogo', icon: Package },
+                        { id: 'moderation', label: 'Moderação', icon: ShieldAlert },
                         { id: 'sales', label: 'Vendas', icon: TrendingUp },
                         { id: 'settings', label: 'Configurações', icon: Settings },
                     ].map(item => (
@@ -407,6 +438,79 @@ export default function AdminDashboard() {
                                         </td>
                                     </tr>
                                 ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+
+                {activeTab === 'moderation' && (
+                    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden animate-fadein">
+                        <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-yellow-50/30">
+                            <div>
+                                <h3 className="text-lg font-black text-[#2B2B2B] flex items-center gap-2">
+                                    <ShieldAlert size={20} className="text-yellow-600" /> Fila de Moderação
+                                </h3>
+                                <p className="text-sm text-gray-500 font-medium mt-1">
+                                    Modelos de usuários sem Trust Level aguardando sua revisão.
+                                </p>
+                            </div>
+                            <span className="px-3 py-1 bg-yellow-100 text-yellow-700 font-black rounded-lg text-sm">
+                                {pendingModels.length} Pendentes
+                            </span>
+                        </div>
+                        <table className="w-full text-left">
+                            <thead className="bg-gray-50/50">
+                                <tr>
+                                    <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase">Modelo</th>
+                                    <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase">Criador Data</th>
+                                    <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase">Infos</th>
+                                    <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase text-right">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {pendingModels.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={4} className="px-6 py-12 text-center text-gray-400 font-bold">
+                                            Nenhum modelo na fila de aprovação! 🎉
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    pendingModels.map((model) => (
+                                        <tr key={model.id} className="hover:bg-gray-50/30 transition-colors">
+                                            <td className="px-6 py-4 flex items-center gap-3">
+                                                <div className="w-12 h-12 rounded-lg bg-gray-100 overflow-hidden shrink-0 border border-gray-200">
+                                                    <img src={model.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-sm text-[#2B2B2B]">{model.title}</p>
+                                                    <span className="text-xs font-bold text-gray-500 px-2 py-0.5 rounded bg-gray-100">{model.format}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <p className="font-bold text-sm text-[#2B2B2B]">@{model.author?.username}</p>
+                                                <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
+                                                    Nível {model.author?.trust_level || 1} • {model.author?.subscription_status || 'Free'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm font-black text-[#2B2B2B]">
+                                                {model.price === 0 ? 'Grátis' : `R$ ${Number(model.price).toFixed(2)}`}
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    <button onClick={() => window.open(`/models/${model.id}`, '_blank')} className="px-3 py-1.5 bg-gray-100 rounded-lg text-gray-600 font-bold text-xs hover:bg-gray-200 transition-colors flex items-center gap-1">
+                                                        <Eye size={14} /> Ver
+                                                    </button>
+                                                    <button onClick={() => handleModerateModel(model.id, 'rejected')} className="px-3 py-1.5 rounded-lg text-red-500 font-bold text-xs border border-red-200 hover:bg-red-50 transition-colors flex items-center gap-1">
+                                                        <XCircle size={14} /> Rejeitar
+                                                    </button>
+                                                    <button onClick={() => handleModerateModel(model.id, 'approved')} className="px-3 py-1.5 bg-green-600 text-white rounded-lg font-bold text-xs hover:bg-green-700 shadow-md shadow-green-600/20 transition-colors flex items-center gap-1">
+                                                        <CheckCircle2 size={14} /> Aprovar
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
