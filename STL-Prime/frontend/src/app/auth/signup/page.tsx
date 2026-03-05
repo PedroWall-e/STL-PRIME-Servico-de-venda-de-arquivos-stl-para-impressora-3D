@@ -165,8 +165,8 @@ export default function SignupPage() {
 
                         <p className="text-xs text-gray-400 text-center font-medium">
                             Ao criar conta, concorda com os nossos{' '}
-                            <a href="#" className="text-[#3347FF] hover:underline">Termos de Serviço</a> e{' '}
-                            <a href="#" className="text-[#3347FF] hover:underline">Política de Privacidade</a>.
+                            <Link href="/terms" className="text-[#3347FF] hover:underline">Termos de Serviço</Link> e{' '}
+                            <Link href="/privacy" className="text-[#3347FF] hover:underline">Política de Privacidade</Link>.
                         </p>
                     </form>
 

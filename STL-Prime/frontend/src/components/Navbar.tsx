@@ -63,22 +63,31 @@ export default function Navbar() {
                         </div>
                     </Link>
 
-                    {/* Search Desktop (Secundária) */}
-                    <div className="hidden md:flex flex-1 max-w-md mx-8 relative">
+                    {/* Search Desktop */}
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            const q = (e.currentTarget.elements.namedItem('q') as HTMLInputElement).value.trim();
+                            if (q) window.location.href = `/models?q=${encodeURIComponent(q)}`;
+                            else window.location.href = '/models';
+                        }}
+                        className="hidden md:flex flex-1 max-w-md mx-8 relative"
+                    >
                         <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
                             <Search className="w-4 h-4 text-gray-400" />
                         </div>
                         <input
+                            name="q"
                             type="text"
                             placeholder="Pesquisar modelos 3D..."
                             className="w-full bg-gray-100 border-transparent focus:bg-white focus:border-prime-blue focus:ring-2 focus:ring-prime-blue/20 rounded-full py-2.5 pl-10 pr-4 text-sm transition-all outline-none"
                         />
-                    </div>
+                    </form>
 
                     {/* Ações Desktop */}
                     <div className="hidden md:flex items-center gap-4">
-                        <Link href="/" className="text-gray-600 hover:text-prime-blue font-bold text-sm transition-colors">Descobrir</Link>
-                        <Link href="/models?free=true" className="text-gray-600 hover:text-prime-blue font-bold text-sm transition-colors">Grátis</Link>
+                        <Link href="/models" className="text-gray-600 hover:text-prime-blue font-bold text-sm transition-colors">Descobrir</Link>
+                        <Link href="/models?price=free" className="text-gray-600 hover:text-prime-blue font-bold text-sm transition-colors">Grátis</Link>
                         <Link href="/community" className="text-gray-600 hover:text-prime-blue font-bold text-sm transition-colors">Comunidade</Link>
                         <a href="https://www.datafrontier3d.com.br" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-prime-blue font-bold text-sm transition-colors flex items-center gap-1">
                             Loja Oficial DF <Box size={14} />
@@ -131,32 +140,53 @@ export default function Navbar() {
 
             {/* Menu Mobile */}
             {isOpen && (
-                <div className="md:hidden fixed inset-0 top-20 z-40 bg-white p-6 flex flex-col gap-6 border-b border-gray-200">
-                    <input
-                        type="text"
-                        placeholder="Pesquisar modelos 3D..."
-                        className="w-full bg-gray-100 border-transparent focus:border-prime-blue rounded-xl py-3 px-4 text-sm outline-none"
-                    />
+                <div className="md:hidden fixed inset-0 top-20 z-40 bg-white p-6 flex flex-col gap-4 border-b border-gray-200 overflow-y-auto">
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            const q = (e.currentTarget.elements.namedItem('q') as HTMLInputElement).value.trim();
+                            setIsOpen(false);
+                            window.location.href = q ? `/models?q=${encodeURIComponent(q)}` : '/models';
+                        }}
+                    >
+                        <input
+                            name="q"
+                            type="text"
+                            placeholder="Pesquisar modelos 3D..."
+                            className="w-full bg-gray-100 border-transparent focus:border-prime-blue rounded-xl py-3 px-4 text-sm outline-none"
+                        />
+                    </form>
+
+                    <Link href="/models" className="font-bold text-lg text-gray-800" onClick={() => setIsOpen(false)}>Descobrir</Link>
+                    <Link href="/models?price=free" className="font-bold text-lg text-gray-800" onClick={() => setIsOpen(false)}>Grátis</Link>
+                    <Link href="/community" className="font-bold text-lg text-gray-800" onClick={() => setIsOpen(false)}>Comunidade</Link>
+
+                    <div className="border-t border-gray-100 pt-4 mt-2 flex flex-col gap-4">
+                        {user ? (
+                            <>
+                                {profile?.role === 'admin' && (
+                                    <Link href="/admin" className="font-bold text-lg text-red-600" onClick={() => setIsOpen(false)}>Painel Admin</Link>
+                                )}
+                                <Link href="/my-collections" className="font-bold text-lg text-gray-800 flex items-center gap-2" onClick={() => setIsOpen(false)}>
+                                    <FolderHeart className="w-5 h-5" /> Coleções
+                                </Link>
+                                <Link href="/upload" className="font-bold text-lg text-prime-blue flex items-center gap-2" onClick={() => setIsOpen(false)}>
+                                    <UploadCloud className="w-5 h-5" /> Carregar Modelo
+                                </Link>
+                                <Link href="/profile/settings" className="font-bold text-lg text-gray-800 flex items-center gap-2" onClick={() => setIsOpen(false)}>
+                                    <Settings className="w-5 h-5" /> Área do Cliente
+                                </Link>
+                                <button onClick={handleLogout} className="mt-2 py-4 rounded-xl font-bold text-white text-center bg-gray-800">Sair</button>
+                            </>
+                        ) : (
+                            <Link href="/auth/signup" className="py-4 rounded-xl font-bold text-white text-center bg-prime-blue" onClick={() => setIsOpen(false)}>
+                                Entrar / Registar
                             </Link>
-                            <Link href="/upload" className="text-left font-bold text-lg text-prime-blue flex items-center gap-2" onClick={() => setIsOpen(false)}>
-                                <UploadCloud className="w-5 h-5" /> Carregar Modelo
-                            </Link>
-                            <Link href="/profile/settings" className="text-left font-bold text-lg text-gray-800 flex items-center gap-2" onClick={() => setIsOpen(false)}>
-                                <Settings className="w-5 h-5" /> Área do Cliente
-                            </Link>
-                            {profile?.role === 'admin' && (
-                <Link href="/admin" className="text-left font-bold text-lg text-red-600" onClick={() => setIsOpen(false)}>Painel Admin</Link>
-            )}
-            <button onClick={handleLogout} className="mt-auto py-4 rounded-xl font-bold text-white text-center bg-gray-800">Sair</button>
-        </>
-    ) : (
-        <Link href="/auth/signup" className="mt-auto py-4 rounded-xl font-bold text-white text-center bg-prime-blue" onClick={() => setIsOpen(false)}>
-            Entrar / Registar
-        </Link>
-    )
-}
-                </div >
+                        )}
+                    </div>
+                </div>
             )}
         </>
     );
 }
+

@@ -109,7 +109,7 @@ export default function LoginPage() {
                         <div>
                             <div className="flex items-center justify-between mb-2">
                                 <label className="block text-sm font-bold text-gray-700">Senha</label>
-                                <a href="#" className="text-xs font-bold text-[#3347FF] hover:underline">Esqueceu a senha?</a>
+                                <Link href="/auth/forgot-password" className="text-xs font-bold text-[#3347FF] hover:underline">Esqueceu a senha?</Link>
                             </div>
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">

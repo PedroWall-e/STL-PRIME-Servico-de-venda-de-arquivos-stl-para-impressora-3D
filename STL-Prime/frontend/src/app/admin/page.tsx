@@ -578,6 +578,127 @@ export default function AdminDashboard() {
                         </div>
                     </div>
                 )}
+
+                {/* ── Configurações ─────────────────────────────────────── */}
+                {activeTab === 'settings' && (
+                    <div className="space-y-6 animate-fadein">
+                        <div className="mb-6">
+                            <h2 className="text-2xl font-black text-[#2B2B2B]">Configurações da Plataforma</h2>
+                            <p className="text-gray-500 text-sm font-medium mt-1">Gerencie parâmetros globais da STL Prime.</p>
+                        </div>
+
+                        {/* Card 1: Taxa da Plataforma */}
+                        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+                            <div className="flex items-start gap-4 mb-6">
+                                <div className="p-3 rounded-2xl bg-blue-50 text-[#3347FF]">
+                                    <DollarSign size={22} />
+                                </div>
+                                <div>
+                                    <h3 className="font-black text-[#2B2B2B] text-lg">Taxa da Plataforma</h3>
+                                    <p className="text-gray-500 text-sm font-medium">Percentual retido pela STL Prime em cada venda de criador.</p>
+                                </div>
+                            </div>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                                <div className="relative flex-1 max-w-xs">
+                                    <input
+                                        type="number"
+                                        defaultValue={30}
+                                        min={0}
+                                        max={100}
+                                        className="w-full pl-4 pr-10 py-3 border border-gray-200 rounded-2xl font-black text-[#2B2B2B] text-lg focus:outline-none focus:border-[#3347FF] focus:ring-2 focus:ring-[#3347FF]/20"
+                                    />
+                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-black text-lg">%</span>
+                                </div>
+                                <div className="flex gap-3">
+                                    <button className="px-6 py-3 rounded-2xl bg-[#3347FF] text-white font-bold text-sm hover:bg-[#2236ee] transition-colors shadow-sm">
+                                        Salvar alteração
+                                    </button>
+                                    <button className="px-6 py-3 rounded-2xl bg-gray-100 text-gray-600 font-bold text-sm hover:bg-gray-200 transition-colors">
+                                        Cancelar
+                                    </button>
+                                </div>
+                            </div>
+                            <p className="text-xs text-gray-400 font-medium mt-3">
+                                Valor atual: <strong>30%</strong> para a plataforma / <strong>70%</strong> para o criador.
+                            </p>
+                        </div>
+
+                        {/* Card 2: Moderação Global */}
+                        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+                            <div className="flex items-start gap-4 mb-6">
+                                <div className="p-3 rounded-2xl bg-orange-50 text-orange-500">
+                                    <ShieldAlert size={22} />
+                                </div>
+                                <div>
+                                    <h3 className="font-black text-[#2B2B2B] text-lg">Moderação Global</h3>
+                                    <p className="text-gray-500 text-sm font-medium">Controle como novos modelos são publicados na plataforma.</p>
+                                </div>
+                            </div>
+                            <div className="space-y-4">
+                                {[
+                                    { id: 'auto_approve', label: 'Aprovação Automática para Criadores Novatos', desc: 'Quando ativado, modelos de novos criadores entram no catálogo sem revisão manual.', defaultChecked: false },
+                                    { id: 'trust_bypass', label: 'Bypass de Moderação para Criadores Verificados', desc: 'Criadores com badge de confiança alta publicam sem aprovação.', defaultChecked: true },
+                                    { id: 'adult_filter', label: 'Filtro de Conteúdo Adulto', desc: 'Bloqueia automaticamente modelos com tags de conteúdo adulto.', defaultChecked: true },
+                                ].map(opt => (
+                                    <div key={opt.id} className="flex items-start justify-between gap-6 py-4 border-b border-gray-50 last:border-0">
+                                        <div className="flex-1">
+                                            <p className="font-bold text-[#2B2B2B] text-sm">{opt.label}</p>
+                                            <p className="text-gray-400 text-xs font-medium mt-0.5">{opt.desc}</p>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
+                                            <input type="checkbox" defaultChecked={opt.defaultChecked} className="sr-only peer" />
+                                            <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-[#3347FF] transition-all after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
+                                        </label>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Card 3: Chaves de API Externas */}
+                        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+                            <div className="flex items-start gap-4 mb-6">
+                                <div className="p-3 rounded-2xl bg-purple-50 text-purple-600">
+                                    <Settings size={22} />
+                                </div>
+                                <div>
+                                    <h3 className="font-black text-[#2B2B2B] text-lg">Integrações & Chaves de API</h3>
+                                    <p className="text-gray-500 text-sm font-medium">Gerencie as conexões com serviços externos da plataforma.</p>
+                                </div>
+                            </div>
+                            <div className="space-y-4">
+                                {[
+                                    { label: 'Stripe Secret Key', placeholder: 'sk_live_••••••••••••••••', icon: '💳' },
+                                    { label: 'Stripe Webhook Secret', placeholder: 'whsec_••••••••••••••••', icon: '🔔' },
+                                    { label: 'Resend API Key', placeholder: 're_••••••••••••••••••••••', icon: '📧' },
+                                    { label: 'Supabase Service Role Key', placeholder: 'eyJhbGciOiJ••••••••', icon: '🔐' },
+                                ].map(field => (
+                                    <div key={field.label}>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                                            {field.icon} {field.label}
+                                        </label>
+                                        <div className="flex gap-3">
+                                            <input
+                                                type="password"
+                                                placeholder={field.placeholder}
+                                                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 bg-gray-50 focus:bg-white focus:outline-none focus:border-[#3347FF] focus:ring-2 focus:ring-[#3347FF]/20 transition-all"
+                                            />
+                                            <button className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-500 hover:border-[#3347FF] hover:text-[#3347FF] text-xs font-bold transition-colors">
+                                                Atualizar
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2">
+                                <span className="text-amber-500 text-sm mt-0.5">⚠️</span>
+                                <p className="text-xs text-amber-700 font-medium">
+                                    Por segurança, estas chaves são geridas via variáveis de ambiente no servidor e não são salvas neste painel. Use o arquivo <code className="bg-amber-100 px-1 rounded">.env.local</code> ou as configurações da Vercel.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
             </main>
         </div>
     );
