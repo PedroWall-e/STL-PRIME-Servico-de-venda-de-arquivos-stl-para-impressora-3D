@@ -2,7 +2,8 @@ services:
   db:
     image: mysql:8.0
     container_name: stl_prime_db
-    restart: always
+    restart: unless-stopped
+    command: --innodb-buffer-pool-size=128M --max-connections=100
     environment:
       MYSQL_DATABASE: stl_prime
       MYSQL_USER: stl_user
@@ -14,13 +15,19 @@ services:
       - mysql_data:/var/lib/mysql
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "stl_user", "-p=stl_password" ]
-      interval: 5s
+      interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 800M
 
   backend:
     build: ./backend
     container_name: stl_prime_backend
+    restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
@@ -28,16 +35,27 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.8'
+          memory: 300M
 
   frontend:
     build: ./frontend
     container_name: stl_prime_frontend
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
     depends_on:
       - backend
+    deploy:
+      resources:
+        limits:
+          cpus: '0.8'
+          memory: 300M
 
 volumes:
   mysql_data:
