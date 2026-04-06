@@ -10,7 +10,7 @@ services:
       MYSQL_PASSWORD: stl_password
       MYSQL_ROOT_PASSWORD: root_password
     ports:
-      - "3306:3306"
+      - "15306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
@@ -29,7 +29,7 @@ services:
     container_name: stl_prime_backend
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "15800:8000"
     environment:
       DATABASE_URL: mysql+pymysql://stl_user:stl_password@db:3306/stl_prime
     depends_on:
@@ -46,9 +46,9 @@ services:
     container_name: stl_prime_frontend
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "15300:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_URL=http://localhost:15800
     depends_on:
       - backend
     deploy:
