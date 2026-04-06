@@ -5,12 +5,12 @@ import { createClient } from '@supabase/supabase-js';
 export const dynamic = 'force-dynamic';
 
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2026-02-25.clover',
-});
-
 export async function POST(req: NextRequest) {
     try {
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'dummy_key_to_bypass_build', {
+            apiVersion: '2026-02-25.clover',
+        });
+
         const { items, userId } = await req.json();
 
         if (!items || items.length === 0) {

@@ -3,10 +3,6 @@ import Stripe from 'stripe';
 
 export const dynamic = 'force-dynamic';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2026-02-25.clover',
-});
-
 const PLANS = {
     pro: {
         name: 'STL Prime Pro',
@@ -22,6 +18,10 @@ const PLANS = {
 
 export async function POST(req: NextRequest) {
     try {
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'dummy_key_to_bypass_build', {
+            apiVersion: '2026-02-25.clover',
+        });
+        
         const { plan, userId } = await req.json();
 
         if (!plan || !PLANS[plan as keyof typeof PLANS]) {

@@ -236,7 +236,15 @@ export default function ModelClientPage({ params }: ModelClientPageProps) {
                                 </button>
                             ) : (
                                 <button
-                                    onClick={() => addItem({ id: model.id, title: model.title, price: model.price, thumbnail_url: model.thumbnail_url, slug: model.slug })}
+                                    onClick={() => addItem({ 
+                                        id: model.id, 
+                                        title: model.title, 
+                                        price: model.price, 
+                                        thumbnail_url: model.thumbnail_url, 
+                                        slug: model.slug,
+                                        format: model.format ?? null,
+                                        author_username: model.author?.username ?? 'anon'
+                                    })}
                                     className="flex-1 py-4 bg-[#3347FF] hover:bg-[#2236ee] text-white font-black rounded-2xl flex items-center justify-center gap-2 transition-colors shadow-lg shadow-[#3347FF]/20"
                                 >
                                     <ShoppingCart size={20} /> Adicionar ao Carrinho

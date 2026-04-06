@@ -5,13 +5,12 @@ import { createClient } from '@supabase/supabase-js';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-// Initialize Supabase Admin to bypass RLS and fetch the user's email
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-
 export async function POST(req: NextRequest) {
     try {
+        // Initialize Supabase Admin to bypass RLS and fetch the user's email
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
         if (!resend) {
             console.warn('[Resend] RESEND_API_KEY not configured. Skipping follower email.');
             return NextResponse.json({ skipped: true }, { status: 200 });

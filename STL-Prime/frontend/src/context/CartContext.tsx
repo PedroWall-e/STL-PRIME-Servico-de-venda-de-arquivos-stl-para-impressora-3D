@@ -9,6 +9,7 @@ export interface CartItem {
     thumbnail_url: string | null;
     format: string | null;
     author_username: string;
+    slug?: string;
 }
 
 interface CartContextType {
