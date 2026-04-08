@@ -4,8 +4,11 @@ from sqlalchemy.orm import Session
 from database import engine, get_db
 import models, schemas, auth
 
-# Create database tables
-models.Base.metadata.create_all(bind=engine)
+# Create database tables (best-effort — schema managed by Supabase/db-patch)
+try:
+    models.Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"[WARN] create_all skipped: {e}")
 
 app = FastAPI(title="STL Prime API")
 

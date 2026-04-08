@@ -1,11 +1,13 @@
 from sqlalchemy import Column, Integer, String, Float, Boolean, Text, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from database import Base
+import uuid
 
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     email = Column(String(255), unique=True, index=True)
     hashed_password = Column(String(255))
     full_name = Column(String(255))
@@ -22,9 +24,9 @@ class STLModel(Base):
     description = Column(Text)
     file_url = Column(String(500))
     image_url = Column(String(500))
-    price = Column(Float, default=0.0) # 0.0 means free
+    price = Column(Float, default=0.0)
     is_free = Column(Boolean, default=False)
-    owner_id = Column(Integer, ForeignKey("users.id"))
+    owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
 
     owner = relationship("User", back_populates="models")
     material_properties = relationship("MaterialProperty", back_populates="model")
