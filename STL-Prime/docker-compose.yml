@@ -16,6 +16,8 @@ services:
     image: postgres:15-alpine
     container_name: supabase_db_patch
     restart: "no"
+    environment:
+      PGPASSWORD: "root_password"
     depends_on:
       db:
         condition: service_healthy
