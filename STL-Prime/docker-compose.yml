@@ -21,8 +21,7 @@ services:
       <<: *supabase-config
       POSTGRES_USER: postgres
     volumes:
-      - supabase_db_data_v3:/var/lib/postgresql/data
-      - ./00-supabase-schemas.sql:/docker-entrypoint-initdb.d/00-schemas.sql
+      - supabase_db_data_v4:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1 -p 5432"]
       interval: 5s
@@ -88,7 +87,7 @@ services:
       JWT_SECRET: "super-secret-jwt-token-with-at-least-32-characters-long"
       REGION: local
     volumes:
-      - supabase_storage_data_v3:/var/lib/storage
+      - supabase_storage_data_v4:/var/lib/storage
     depends_on:
       rest:
         condition: service_started
@@ -176,14 +175,23 @@ services:
     environment:
       PGPASSWORD: "root_password"
     volumes:
-      - ./database.sql:/tmp/database.sql
+      - ./:/repo_mount:ro
     command: >
       sh -c '
+        echo "Aguardando DB aceitar conexoes..." &&
+        until pg_isready -h db -p 5432 -U postgres; do sleep 2; done;
+        echo "Aplicando schemas oficiais Supabase e extensoes..." &&
+        psql -h db -U postgres -d postgres -c "CREATE SCHEMA IF NOT EXISTS auth; CREATE SCHEMA IF NOT EXISTS storage; CREATE SCHEMA IF NOT EXISTS graphql; CREATE SCHEMA IF NOT EXISTS graphql_public; CREATE SCHEMA IF NOT EXISTS realtime; CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\" SCHEMA public; CREATE EXTENSION IF NOT EXISTS \"pgcrypto\" SCHEMA public; CREATE EXTENSION IF NOT EXISTS \"pgjwt\" SCHEMA public; DO \$\$ BEGIN CREATE ROLE anon NOLOGIN NOINHERIT; EXCEPTION WHEN DUPLICATE_OBJECT THEN NULL; END \$\$; DO \$\$ BEGIN CREATE ROLE authenticated NOLOGIN NOINHERIT; EXCEPTION WHEN DUPLICATE_OBJECT THEN NULL; END \$\$; DO \$\$ BEGIN CREATE ROLE service_role NOLOGIN NOINHERIT; EXCEPTION WHEN DUPLICATE_OBJECT THEN NULL; END \$\$;" &&
         echo "Waiting for auth.users to be created by GoTrue..." &&
         until psql -h db -U postgres -d postgres -c "SELECT 1 FROM auth.users LIMIT 1;" >/dev/null 2>&1; do sleep 2; done;
         echo "auth.users exists! Injecting database.sql schemas..." &&
-        psql -h db -U postgres -d postgres -f /tmp/database.sql &&
-        echo "Database initialized successfully!"
+        SQL_FILE=$$(find /repo_mount -type f -name database.sql | head -n 1) &&
+        if [ -n "$$SQL_FILE" ] && [ -f "$$SQL_FILE" ]; then
+          psql -h db -U postgres -d postgres -f "$$SQL_FILE" &&
+          echo "Database initialized successfully! You can ignore further db-init loop logs." && sleep infinity
+        else
+          echo "COULD NOT FIND database.sql IN /repo_mount DIRECTORY. PORTAINER MOUNT FAILED. Dirs found: " && ls -la /repo_mount && sleep infinity
+        fi
       '
     depends_on:
       db:
@@ -214,5 +222,5 @@ services:
           memory: 300M
 
 volumes:
-  supabase_db_data_v3:
-  supabase_storage_data_v3:
+  supabase_db_data_v4:
+  supabase_storage_data_v4:
