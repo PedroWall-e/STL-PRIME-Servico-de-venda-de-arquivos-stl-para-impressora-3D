@@ -101,7 +101,37 @@ services:
       KONG_DATABASE: "off"
       KONG_DNS_ORDER: LAST,A,CNAME
       KONG_PLUGINS: request-transformer,cors,key-auth,acl,jwt
-    command: /bin/sh -c "echo -e \"_format_version: '2.1'\n_transform: true\nservices:\n  - name: rest\n    url: http://rest:3000\n    routes:\n      - name: rest-route\n        paths:\n          - /rest/v1\n        strip_path: true\n  - name: auth\n    url: http://auth:9999\n    routes:\n      - name: auth-route\n        paths:\n          - /auth/v1\n        strip_path: true\n  - name: storage\n    url: http://storage:5000\n    routes:\n      - name: storage-route\n        paths:\n          - /storage/v1\n        strip_path: true\" > /kong.yml && /docker-entrypoint.sh kong docker-start -c /kong.yml"
+    command:
+      - /bin/sh
+      - -c
+      - |
+        cat << 'EOF' > /kong.yml
+        _format_version: "2.1"
+        _transform: true
+        services:
+          - name: rest
+            url: http://rest:3000
+            routes:
+              - name: rest-route
+                paths:
+                  - /rest/v1
+                strip_path: true
+          - name: auth
+            url: http://auth:9999
+            routes:
+              - name: auth-route
+                paths:
+                  - /auth/v1
+                strip_path: true
+          - name: storage
+            url: http://storage:5000
+            routes:
+              - name: storage-route
+                paths:
+                  - /storage/v1
+                strip_path: true
+        EOF
+        /docker-entrypoint.sh kong docker-start -c /kong.yml
     depends_on:
       - rest
       - auth
