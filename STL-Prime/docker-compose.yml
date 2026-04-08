@@ -13,7 +13,9 @@ x-supabase-config: &supabase-config
 
 services:
   db-patch:
-    image: postgres:15-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.dbpatch
     container_name: supabase_db_patch
     restart: "no"
     environment:
@@ -62,25 +64,20 @@ services:
         psql -h db -U postgres -d postgres -c "CREATE TABLE IF NOT EXISTS storage.objects (id uuid NOT NULL DEFAULT uuid_generate_v4() PRIMARY KEY, bucket_id text REFERENCES storage.buckets(id), name text, owner uuid, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now(), last_accessed_at timestamptz DEFAULT now(), metadata jsonb, version text);"
         psql -h db -U postgres -d postgres -c "CREATE UNIQUE INDEX IF NOT EXISTS bucketid_objname ON storage.objects (bucket_id, name);"
 
-        echo "=== DB-PATCH: Setting default privileges ==="
-        psql -h db -U postgres -d postgres -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO anon;"
-        psql -h db -U postgres -d postgres -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO authenticated, service_role;"
-        psql -h db -U postgres -d postgres -c "ALTER DEFAULT PRIVILEGES IN SCHEMA storage GRANT ALL ON TABLES TO service_role;"
-
-        echo "=== DB-PATCH: Waiting for auth.users table (GoTrue must create it first) ==="
-        for i in $(seq 1 60); do
+        echo "=== DB-PATCH: Waiting for auth.users (GoTrue migrations) ==="
+        for i in $$(seq 1 90); do
           if psql -h db -U postgres -d postgres -c "SELECT 1 FROM auth.users LIMIT 1;" >/dev/null 2>&1; then
-            echo "auth.users found!"
+            echo "auth.users ready!"
             break
           fi
-          echo "Waiting for GoTrue to create auth.users... attempt $i/60"
-          sleep 3
+          echo "Waiting for GoTrue... attempt $$i/90"
+          sleep 2
         done
 
-        echo "=== DB-PATCH: Applying database.sql application schemas ==="
-        psql -h db -U postgres -d postgres -c "CREATE TABLE IF NOT EXISTS public.users (id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY, full_name TEXT NOT NULL DEFAULT '', username VARCHAR(50) UNIQUE NOT NULL DEFAULT '', avatar_url TEXT, bio TEXT, is_creator BOOLEAN DEFAULT false, stripe_customer_id TEXT, subscription_status VARCHAR(50) DEFAULT 'free', subscription_id TEXT, address_street TEXT, address_city TEXT, address_state TEXT, address_zip TEXT, address_country TEXT DEFAULT 'Brasil', role VARCHAR(20) DEFAULT 'user', trust_level INTEGER DEFAULT 1, created_at TIMESTAMPTZ DEFAULT now() NOT NULL, updated_at TIMESTAMPTZ DEFAULT now() NOT NULL);"
+        echo "=== DB-PATCH: Applying FULL database.sql ==="
+        psql -h db -U postgres -d postgres -f /app/database.sql || echo "Some statements may have failed (OK if tables exist)"
 
-        echo "=== DB-PATCH: Granting table permissions ==="
+        echo "=== DB-PATCH: Final grants ==="
         psql -h db -U postgres -d postgres -c "GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;"
         psql -h db -U postgres -d postgres -c "GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated, service_role;"
         psql -h db -U postgres -d postgres -c "GRANT ALL ON ALL TABLES IN SCHEMA storage TO service_role;"
