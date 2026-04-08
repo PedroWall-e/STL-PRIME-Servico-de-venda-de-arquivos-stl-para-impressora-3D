@@ -33,65 +33,55 @@ services:
         until pg_isready -h db -p 5432 -U postgres; do sleep 2; done
 
         echo "=== DB-PATCH: Creating schemas ==="
-        psql -h db -U postgres -d postgres -c "CREATE SCHEMA IF NOT EXISTS storage;"       || true
-        psql -h db -U postgres -d postgres -c "CREATE SCHEMA IF NOT EXISTS auth;"          || true
-        psql -h db -U postgres -d postgres -c "CREATE SCHEMA IF NOT EXISTS graphql;"       || true
+        psql -h db -U postgres -d postgres -c "CREATE SCHEMA IF NOT EXISTS storage;"        || true
+        psql -h db -U postgres -d postgres -c "CREATE SCHEMA IF NOT EXISTS auth;"           || true
+        psql -h db -U postgres -d postgres -c "CREATE SCHEMA IF NOT EXISTS graphql;"        || true
         psql -h db -U postgres -d postgres -c "CREATE SCHEMA IF NOT EXISTS graphql_public;" || true
-        psql -h db -U postgres -d postgres -c "CREATE SCHEMA IF NOT EXISTS realtime;"      || true
+        psql -h db -U postgres -d postgres -c "CREATE SCHEMA IF NOT EXISTS realtime;"       || true
 
-        echo "=== DB-PATCH: Creating roles FIRST (needed before extensions) ==="
+        echo "=== DB-PATCH: Creating roles (BEFORE extensions) ==="
         psql -h db -U postgres -d postgres -c "CREATE ROLE supabase_admin LOGIN NOINHERIT CREATEROLE CREATEDB REPLICATION BYPASSRLS;" 2>/dev/null || true
         psql -h db -U postgres -d postgres -c "CREATE ROLE anon NOLOGIN NOINHERIT;"                  2>/dev/null || true
         psql -h db -U postgres -d postgres -c "CREATE ROLE authenticated NOLOGIN NOINHERIT;"          2>/dev/null || true
         psql -h db -U postgres -d postgres -c "CREATE ROLE service_role NOLOGIN NOINHERIT BYPASSRLS;" 2>/dev/null || true
 
-        echo "=== DB-PATCH: Creating extensions ==="
-        psql -h db -U postgres -d postgres -c 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA public;' || true
-        psql -h db -U postgres -d postgres -c 'CREATE EXTENSION IF NOT EXISTS "pgcrypto" SCHEMA public;'  || true
-        psql -h db -U postgres -d postgres -c 'CREATE EXTENSION IF NOT EXISTS "pgjwt" SCHEMA public;'     || true
+        echo "=== DB-PATCH: Installing uuid-ossp in public schema ==="
+        psql -h db -U postgres -d postgres -c 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'  || true
+        psql -h db -U postgres -d postgres -c 'CREATE EXTENSION IF NOT EXISTS "pgcrypto";'   || true
+        psql -h db -U postgres -d postgres -c 'CREATE EXTENSION IF NOT EXISTS "pgjwt";'      || true
 
-        echo "=== DB-PATCH: Granting permissions ==="
-        psql -h db -U postgres -d postgres -c "GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;"  || true
-        psql -h db -U postgres -d postgres -c "GRANT USAGE ON SCHEMA auth TO anon, authenticated, service_role;"    || true
-        psql -h db -U postgres -d postgres -c "GRANT USAGE ON SCHEMA storage TO anon, authenticated, service_role;" || true
-        psql -h db -U postgres -d postgres -c "GRANT ALL ON SCHEMA auth TO supabase_admin;"    || true
-        psql -h db -U postgres -d postgres -c "GRANT ALL ON SCHEMA storage TO supabase_admin;" || true
-        psql -h db -U postgres -d postgres -c "GRANT ALL ON SCHEMA public TO supabase_admin;"  || true
-
-        echo "=== DB-PATCH: Creating MINIMAL storage tables (migrations will add extra columns) ==="
-        psql -h db -U postgres -d postgres -c "CREATE TABLE IF NOT EXISTS storage.buckets (id text NOT NULL PRIMARY KEY, name text NOT NULL UNIQUE, owner uuid, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now());" || true
-        psql -h db -U postgres -d postgres -c "CREATE TABLE IF NOT EXISTS storage.objects (id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY, bucket_id text REFERENCES storage.buckets(id), name text, owner uuid, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now(), last_accessed_at timestamptz DEFAULT now(), metadata jsonb);" || true
-        psql -h db -U postgres -d postgres -c "CREATE UNIQUE INDEX IF NOT EXISTS bucketid_objname ON storage.objects (bucket_id, name);" || true
-
-        echo "=== DB-PATCH: Verifying storage tables ==="
-        psql -h db -U postgres -d postgres -c "SELECT 1 FROM storage.buckets LIMIT 1;" >/dev/null 2>&1 && echo "storage.buckets OK!" || echo "WARNING: storage.buckets missing!"
-        psql -h db -U postgres -d postgres -c "SELECT 1 FROM storage.objects LIMIT 1;" >/dev/null 2>&1 && echo "storage.objects OK!" || echo "WARNING: storage.objects missing!"
+        echo "=== DB-PATCH: Granting schema permissions ==="
+        psql -h db -U postgres -d postgres -c "GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;"   || true
+        psql -h db -U postgres -d postgres -c "GRANT USAGE ON SCHEMA auth TO anon, authenticated, service_role;"     || true
+        psql -h db -U postgres -d postgres -c "GRANT USAGE ON SCHEMA storage TO anon, authenticated, service_role;"  || true
+        psql -h db -U postgres -d postgres -c "GRANT ALL ON SCHEMA auth TO supabase_admin;"     || true
+        psql -h db -U postgres -d postgres -c "GRANT ALL ON SCHEMA storage TO supabase_admin;"  || true
+        psql -h db -U postgres -d postgres -c "GRANT ALL ON SCHEMA public TO supabase_admin;"   || true
 
         echo "=== DB-PATCH: Waiting for auth.users (GoTrue migrations) ==="
         for i in $(seq 1 90); do
           if psql -h db -U postgres -d postgres -c "SELECT 1 FROM auth.users LIMIT 1;" >/dev/null 2>&1; then
-            echo "auth.users ready!"
+            echo "auth.users ready after $i attempts!"
             break
           fi
           echo "Waiting for GoTrue... attempt $i/90"
           sleep 2
         done
 
-        echo "=== DB-PATCH: Applying FULL database.sql ==="
-        psql -h db -U postgres -d postgres -c "SET search_path TO public, extensions, auth, storage;" || true
-        psql -h db -U postgres -d postgres -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" || true
+        echo "=== DB-PATCH: Applying database.sql ==="
         psql -h db -U postgres -d postgres -f /app/database.sql || true
 
-        echo "=== DB-PATCH: Final grants ==="
-        psql -h db -U postgres -d postgres -c "GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;"              || true
+        echo "=== DB-PATCH: Final table grants ==="
+        psql -h db -U postgres -d postgres -c "GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;"               || true
         psql -h db -U postgres -d postgres -c "GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated, service_role;" || true
-        psql -h db -U postgres -d postgres -c "GRANT ALL ON ALL TABLES IN SCHEMA storage TO service_role;"        || true
+        psql -h db -U postgres -d postgres -c "GRANT ALL ON ALL TABLES IN SCHEMA storage TO service_role;"         || true
         psql -h db -U postgres -d postgres -c "GRANT ALL ON ALL TABLES IN SCHEMA auth TO supabase_admin, service_role;" || true
 
         echo "========================================="
-        echo "=== DB-PATCH COMPLETE - ALL OK ==="
+        echo "=== DB-PATCH COMPLETE ==="
         echo "========================================="
         exit 0
+
 
   db:
     build:

@@ -42,7 +42,7 @@ CREATE TABLE public.users (
 -- TABELA: categories
 -- ==========================================
 CREATE TABLE public.categories (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name VARCHAR(100) UNIQUE NOT NULL,
     slug VARCHAR(100) UNIQUE NOT NULL,
     icon_name VARCHAR(50), -- ex: 'Cpu', 'Printer' (para mapear ícones Lucide)
@@ -64,7 +64,7 @@ INSERT INTO public.categories (name, slug) VALUES
 -- TABELA: models (Arquivos 3D Publicados)
 -- ==========================================
 CREATE TABLE public.models (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     slug VARCHAR(255) UNIQUE NOT NULL,
     description TEXT NOT NULL,
@@ -106,7 +106,7 @@ CREATE TABLE public.likes (
 -- TABELA: purchases (Histórico de Compras/Downloads)
 -- ==========================================
 CREATE TABLE public.purchases (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
     model_id UUID REFERENCES public.models(id) ON DELETE SET NULL,
     amount_paid DECIMAL(10, 2) NOT NULL,
@@ -119,7 +119,7 @@ CREATE TABLE public.purchases (
 -- TABELA: user_subscriptions (Histórico de Assinaturas)
 -- ==========================================
 CREATE TABLE public.user_subscriptions (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
     stripe_subscription_id TEXT UNIQUE NOT NULL,
     plan_type VARCHAR(50) NOT NULL, -- 'pro', 'premium'
@@ -134,7 +134,7 @@ CREATE TABLE public.user_subscriptions (
 -- TABELA: reviews (Avaliações dos Modelos)
 -- ==========================================
 CREATE TABLE public.reviews (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
     model_id UUID REFERENCES public.models(id) ON DELETE CASCADE NOT NULL,
     rating INTEGER CHECK (rating >= 1 AND rating <= 5) NOT NULL,
@@ -210,7 +210,7 @@ INSERT INTO public.post_categories (id, label) VALUES
 -- TABELA: posts (Comunidade)
 -- ==========================================
 CREATE TABLE public.posts (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     title TEXT NOT NULL,
     slug TEXT UNIQUE NOT NULL,
     content TEXT NOT NULL,
@@ -234,7 +234,7 @@ CREATE TABLE public.posts (
 -- TABELA: post_comments (Comentários de Posts)
 -- ==========================================
 CREATE TABLE public.post_comments (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     post_id UUID REFERENCES public.posts(id) ON DELETE CASCADE NOT NULL,
     author_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
     content TEXT NOT NULL,
@@ -252,7 +252,7 @@ CREATE TABLE public.post_reactions (
 -- TABELA: collections (Coleções de Usuários)
 -- ==========================================
 CREATE TABLE public.collections (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
     name VARCHAR(100) NOT NULL,
     description TEXT,
@@ -354,7 +354,7 @@ CREATE POLICY "Users can manage own follows" ON public.follows FOR ALL USING (au
 -- TABELA: notifications (Notificações)
 -- ==========================================
 CREATE TABLE public.notifications (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,  -- destinatário
     actor_id UUID REFERENCES public.users(id) ON DELETE CASCADE,           -- quem gerou
     type VARCHAR(50) NOT NULL, -- 'new_follower', 'new_comment', 'new_model', 'purchase'
