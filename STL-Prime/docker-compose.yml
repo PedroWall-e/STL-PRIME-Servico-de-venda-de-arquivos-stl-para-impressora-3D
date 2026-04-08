@@ -60,8 +60,16 @@ services:
 
         echo "=== DB-PATCH: Creating storage baseline tables ==="
         psql -h db -U postgres -d postgres -c "CREATE TABLE IF NOT EXISTS storage.buckets (id text NOT NULL PRIMARY KEY, name text NOT NULL UNIQUE, owner uuid, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now(), public boolean DEFAULT false, avif_autodetection boolean DEFAULT false, file_size_limit bigint, allowed_mime_types text[]);" || true
-        psql -h db -U postgres -d postgres -c "CREATE TABLE IF NOT EXISTS storage.objects (id uuid NOT NULL DEFAULT uuid_generate_v4() PRIMARY KEY, bucket_id text REFERENCES storage.buckets(id), name text, owner uuid, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now(), last_accessed_at timestamptz DEFAULT now(), metadata jsonb, version text);" || true
+        psql -h db -U postgres -d postgres -c "CREATE TABLE IF NOT EXISTS storage.objects (id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY, bucket_id text REFERENCES storage.buckets(id), name text, owner uuid, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now(), last_accessed_at timestamptz DEFAULT now(), metadata jsonb, version text);" || true
         psql -h db -U postgres -d postgres -c "CREATE UNIQUE INDEX IF NOT EXISTS bucketid_objname ON storage.objects (bucket_id, name);" || true
+
+        echo "=== DB-PATCH: Verifying storage.objects exists ==="
+        if psql -h db -U postgres -d postgres -c "SELECT 1 FROM storage.objects LIMIT 1;" >/dev/null 2>&1; then
+          echo "storage.objects OK!"
+        else
+          echo "ERROR: storage.objects still missing - forcing creation without FK"
+          psql -h db -U postgres -d postgres -c "CREATE TABLE IF NOT EXISTS storage.objects (id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY, name text, owner uuid, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now(), last_accessed_at timestamptz DEFAULT now(), metadata jsonb, version text, bucket_id text);" || true
+        fi
 
         echo "=== DB-PATCH: Waiting for auth.users (GoTrue migrations) ==="
         for i in $(seq 1 90); do
@@ -74,6 +82,8 @@ services:
         done
 
         echo "=== DB-PATCH: Applying FULL database.sql ==="
+        psql -h db -U postgres -d postgres -c "SET search_path TO public, extensions, auth, storage;" || true
+        psql -h db -U postgres -d postgres -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";" || true
         psql -h db -U postgres -d postgres -f /app/database.sql || true
 
         echo "=== DB-PATCH: Final grants ==="
