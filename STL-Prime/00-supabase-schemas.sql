@@ -10,6 +10,32 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA public;
 CREATE EXTENSION IF NOT EXISTS "pgcrypto" SCHEMA public;
 CREATE EXTENSION IF NOT EXISTS "pgjwt" SCHEMA public;
 
+-- Initialize Storage baseline (so migrations have something to alter)
+CREATE TABLE IF NOT EXISTS storage.buckets (
+  id text not null primary key,
+  name text not null unique,
+  owner uuid,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  public boolean default false,
+  avif_autodetection boolean default false,
+  file_size_limit bigint,
+  allowed_mime_types text[]
+);
+
+CREATE TABLE IF NOT EXISTS storage.objects (
+  id uuid not null default uuid_generate_v4() primary key,
+  bucket_id text references storage.buckets(id),
+  name text,
+  owner uuid,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  last_accessed_at timestamptz default now(),
+  metadata jsonb,
+  version text
+);
+CREATE UNIQUE INDEX IF NOT EXISTS bucketid_objname ON storage.objects (bucket_id, name);
+
 -- Supabase required roles
 DO $$
 BEGIN
