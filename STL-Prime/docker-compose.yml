@@ -88,6 +88,7 @@ services:
       STORAGE_BACKEND: file
       TENANT_ID: "stub"
       FILE_SIZE_LIMIT: 52428800
+      GLOBAL_S3_BUCKET: "stub"
       FILE_STORAGE_BACKEND_PATH: /var/lib/storage
       DATABASE_URL: postgres://postgres:root_password@db:5432/postgres
       PUBURL: "http://localhost:15432/storage/v1"
